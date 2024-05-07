@@ -8,23 +8,23 @@ class Game:
     width, height = 800, 600
 
     def __init__(self):
-        self.walls = None
+        self.walls = pygame.sprite.Group()
         self.screen = None
+        self.clock = None
         monitor = get_monitors()[0]
         self.width, self.height = monitor.width, monitor.height
-        self.clock = pygame.time.Clock()
+        self.maze_gen = Maze_Objects.Maze_Generator(group=self.walls, width=self.width, height=self.height)
 
     def main(self):
         pygame.init()
+        self.clock = pygame.time.Clock()
 
         self.screen = pygame.display.set_mode([self.width, self.height])
         # clock = pygame.time.Clock()
         dt = 0
 
         player = Maze_Objects.Maze_Player(self.screen)
-        self.walls = pygame.sprite.Group()
-        maze = maze_generator(self.walls)
-        self.walls.add(Maze_Objects.Maze_Wall(100, 100, 60, 60))
+        maze = self.maze_gen.generate()
 
         running = True
         while running:
@@ -35,7 +35,7 @@ class Game:
                     running = False
 
             # fill the screen with a color to wipe away anything from last frame
-            self.screen.fill("purple")
+            self.screen.fill("black")
 
             self.update_movement(player, dt)
             self.screen.blit(player.image, player.rect.topleft)
