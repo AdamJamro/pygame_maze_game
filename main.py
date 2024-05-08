@@ -1,6 +1,7 @@
 import pygame
 from screeninfo import get_monitors
 
+import Game_Rendering
 import Maze_Objects
 
 
@@ -25,6 +26,8 @@ class Game:
 
         player = Maze_Objects.Maze_Player(self.screen)
         maze = self.maze_gen.generate()
+        engine = Game_Rendering.Engine(self.screen, player, self.walls)
+        pygame.mouse.set_visible(False)
 
         running = True
         while running:
@@ -34,16 +37,7 @@ class Game:
                 if event.type == pygame.QUIT:
                     running = False
 
-            # fill the screen with a color to wipe away anything from last frame
-            self.screen.fill("black")
-
-            self.update_movement(player, dt)
-            self.screen.blit(player.image, player.rect.topleft)
-            for wall in self.walls:
-                self.screen.blit(wall.image, wall.rect)
-
-            # flip() the display to put your work on screen
-            pygame.display.flip()
+            engine.animate(dt)
 
             # limits FPS to 60
             # dt is delta time in seconds since last frame, used for framerate-
@@ -51,25 +45,6 @@ class Game:
             dt = self.clock.tick(60) / 1000
 
         pygame.quit()
-
-    def update_movement(self, sprite, dt):
-        old_x, old_y = sprite.rect.x, sprite.rect.y
-
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
-            sprite.rect.y = max(0, sprite.rect.y - sprite.speed * dt)
-        if keys[pygame.K_s]:
-            sprite.rect.y = min(self.height - sprite.rect.height, sprite.rect.y + sprite.speed * dt)
-        if keys[pygame.K_a]:
-            sprite.rect.x = max(0, sprite.rect.x - sprite.speed * dt)
-        if keys[pygame.K_d]:
-            sprite.rect.x = min(self.width - sprite.rect.width, sprite.rect.x + sprite.speed * dt)
-
-        new_x, new_y = sprite.rect.x, sprite.rect.y
-        for wall_sprite in self.walls:
-            if wall_sprite.rect.colliderect(new_x, new_y, sprite.rect.width, sprite.rect.height):
-                sprite.rect.x, sprite.rect.y = old_x, old_y
-                break
 
 
 if __name__ == "__main__":

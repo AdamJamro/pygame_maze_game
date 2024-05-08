@@ -1,19 +1,30 @@
+import math
 import random
 
 import pygame
 
 
 class Maze_Player(pygame.sprite.Sprite):
+    direction = pygame.math.Vector2(0, -1)
+
     def __init__(self, screen, color="white"):
         super().__init__()
         self.image = pygame.Surface([60, 60])
         self.image.fill(color)
         self.rect = self.image.get_rect()
         self.rect.center = [screen.get_width() / 2, screen.get_height() / 2]
-        self.speed = 300
+        self.speed = 200
+        self.turning_speed = 0.4
+        self.vision_range = 90
 
     def draw(self, screen):
         screen.blit(self.image, self.rect.topleft)
+
+    def change_direction(self, angle):  # angle is + for left turn, - 0 for right
+        sin = math.sin(angle)
+        cos = math.cos(angle)
+        self.direction = pygame.math.Vector2(self.direction.x * cos - self.direction.y * sin, self.direction.x * sin + self.direction.y * cos)
+
 
 
 class Maze_Wall(pygame.sprite.Sprite):
