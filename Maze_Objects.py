@@ -16,6 +16,7 @@ class Maze_Player(pygame.sprite.Sprite):
         self.speed = 200
         self.turning_speed = 0.4
         self.vision_range = 90
+        self.vision_depth = 1500
 
     def draw(self, screen):
         screen.blit(self.image, self.rect.topleft)
@@ -23,8 +24,8 @@ class Maze_Player(pygame.sprite.Sprite):
     def change_direction(self, angle):  # angle is + for left turn, - 0 for right
         sin = math.sin(angle)
         cos = math.cos(angle)
-        self.direction = pygame.math.Vector2(self.direction.x * cos - self.direction.y * sin, self.direction.x * sin + self.direction.y * cos)
-
+        self.direction = pygame.math.Vector2(self.direction.x * cos - self.direction.y * sin,
+                                             self.direction.x * sin + self.direction.y * cos)
 
 
 class Maze_Wall(pygame.sprite.Sprite):
@@ -41,11 +42,13 @@ class Maze_Generator:
         self.walls = group
         self.width = width
         self.height = height
+        self.wall_size = 60 * 2
 
     def generate(self):
-        wall_size = 60 * 2
 
-        for i in range(0, self.width, wall_size):
-            for j in range(0, self.height, wall_size):
-                if random.randint(1, 6) == 1:
-                    self.walls.add(Maze_Wall(i, j, wall_size, wall_size))
+        for i in range(0, self.width, self.wall_size):
+            for j in range(0, self.height, self.wall_size):
+                if abs(i + (self.wall_size - self.width) / 2) < 2 * self.wall_size and abs(j + (self.wall_size - self.height) / 2) < 2 * self.wall_size:
+                    continue
+                if random.randint(1, 5) == 1:
+                    self.walls.add(Maze_Wall(i, j, self.wall_size, self.wall_size))

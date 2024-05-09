@@ -10,8 +10,10 @@ class COLOR(Enum):
     GROUND = 1
     WALL = 2
 
-    color_of = {
-        SKY: default_color_sky,
-        GROUND: default_color_ground,
-        WALL: default_color_wall
+
+color_of = {
+        COLOR.SKY: default_color_sky,
+        COLOR.GROUND: default_color_ground,
+        COLOR.WALL: default_color_wall
     }
+

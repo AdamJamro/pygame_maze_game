@@ -1,13 +1,19 @@
+import math
+import random
+
 import pygame
+from pygame import Vector2
+
 import Maze_Objects
 import graphic_assets
+from graphic_assets import COLOR
 
 
 def get_line_at_point(center: pygame.math.Vector2, curr_direction: pygame.math.Vector2):
     return get_line_from_points(center, center + curr_direction)
 
 
-def get_line_from_points(center, curr_direction):
+def get_line_from_points(center: pygame.math.Vector2, curr_direction: pygame.math.Vector2):
     if curr_direction.x - center.x == 0:
         return center.x, None
 
@@ -20,77 +26,118 @@ def lines_are_parallel(line1, line2):
     return line1[0] == line2[0]
 
 
-def get_intersection(center, curr_direction, obstacle: pygame.surface):
-    ray_line = get_line_from_points(center, curr_direction)
-    wall_lines = [
-        get_line_from_points(obstacle.rect.topleft, obstacle.rect.bottomleft),
-        get_line_from_points(obstacle.rect.bottomleft, obstacle.rect.bottomright),
-        get_line_from_points(obstacle.rect.bottomright, obstacle.rect.topright),
-        get_line_from_points(obstacle.rect.topright, obstacle.rect.topleft)
-    ]
+def get_intersection_dist(center: pygame.math.Vector2, curr_direction: pygame.math.Vector2, obstacle: pygame.surface):
+    center = Vector2(center)
+    curr_direction = Vector2(curr_direction)
+    # ray_line = get_line_at_point(Vector2(center), Vector2(curr_direction))
+    candidate = float("inf")
 
-    if ray_line[1] is None:
-        x = ray_line[0]
-        for wall_line in wall_lines:
-            if obstacle.rect.topleft.x < x < obstacle.rect.topright.x:
-                candidate1 = pygame.math.Vector2(x, obstacle.rect.topleft.y)
-                candidate2 = pygame.math.Vector2(x, obstacle.rect.bottomleft.y)
-                return candidate1 if candidate1.length() <= candidate2.length() else candidate2
+    if abs(curr_direction.x) < 0.1:
+        x = center.x
+        if obstacle.rect.topleft[0] < x < obstacle.rect.topright[0]:
+            candidate1 = (center.y - obstacle.rect.topleft[1]) ** 2
+            candidate2 = (center.y - obstacle.rect.bottomleft[1]) ** 2
+            candidate = min(candidate1, candidate2)
+        return candidate if candidate != float("inf") else None
 
-    for wall_line in wall_lines:
-        if lines_are_parallel(ray_line, wall_line):
-            continue
-        if wall_line[1] is None:
-            x = wall_line[0]
-            if ray_line[0] == x:
-                return pygame.math.Vector2(x, ray_line[0] * x + ray_line[1])
-            continue
+    if abs(curr_direction.length()) < 0.01:
+        return None  # maybe raise an error
+
+        # top line
+    y_intersect = obstacle.rect.topleft[1]
+    t = (y_intersect - center.y) / curr_direction.y
+    if (t > 0 and
+            obstacle.rect.topleft[0] < (x_intersect := center.x + curr_direction.x * t) < obstacle.rect.topright[0]):
+        candidate = min(candidate, (x_intersect - center.x) ** 2 + (y_intersect - center.y) ** 2)
+        # bottom line
+    y_intersect = obstacle.rect.bottomleft[1]
+    t = (y_intersect - center.y) / curr_direction.y
+    if (t > 0 and
+            obstacle.rect.bottomleft[0] < (x_intersect := center.x + curr_direction.x * t) < obstacle.rect.bottomright[
+                0]):
+        candidate = min(candidate, (x_intersect - center.x) ** 2 + (y_intersect - center.y) ** 2)
+        # left line
+    x_intersect = obstacle.rect.topleft[0]
+    t = (x_intersect - center.x) / curr_direction.x
+    if (t > 0 and
+            obstacle.rect.topleft[1] < (y_intersect := center.y + curr_direction.y * t) < obstacle.rect.bottomleft[1]):
+        candidate = min(candidate, (x_intersect - center.x) ** 2 + (y_intersect - center.y) ** 2)
+    # right line
+    x_intersect = obstacle.rect.topright[0]
+    t = (x_intersect - center.x) / curr_direction.x
+    if (t > 0 and
+            obstacle.rect.topright[1] < (y_intersect := center.y + curr_direction.y * t) < obstacle.rect.bottomright[
+                1]):
+        candidate = min(candidate, (x_intersect - center.x) ** 2 + (y_intersect - center.y) ** 2)
+
+    return None if candidate == float("inf") else math.sqrt(candidate)
 
 
 class Engine:
 
     # px_density is the sqrt of the amount of actual pxs used to render one virtual px
-    def __init__(self, screen: pygame.Surface, player: Maze_Objects.Maze_Player, obstacles, px_density: int = 1):
+    def __init__(self, screen: pygame.Surface, player: Maze_Objects.Maze_Player, obstacles, px_density: int = 10):
         self.screen = screen
         self.width, self.height = screen.get_width(), screen.get_height()
         self.center_point = (self.width / 2, self.height / 2)
         self.player = player
         self.obstacles = obstacles
         self.px_density = px_density
-        self.resolution = (int(screen.get_width() / px_density), int(screen.get_height() / px_density))
-        # self.ray_length = 1000
-        self.px_arr = pygame.PixelArray(self.screen)
+        self.resolution = (int(screen.get_width() / self.px_density), int(screen.get_height() / self.px_density))
+        self.ray_length = self.resolution[0]  # MAX
+        self.max_obj_height = self.resolution[1]
 
     def animate(self, dt):
         # fill the screen with a color to wipe away anything from last frame
         self.screen.fill("black")
         self.update_movement(self.player, dt)
-
+        px_arr = pygame.PixelArray(self.screen)
         pxs_to_render = self.ray_trace(self.player, self.obstacles)
+        for i in range(0, px_arr.shape[0], self.px_density // 2):
+            for j in range(0, px_arr.shape[1], self.px_density // 2):
+                px_arr[i, j] = graphic_assets.color_of[  # pxs_to_render[i][j]
+                    pxs_to_render[int(math.floor(i / self.px_density))][int(math.floor(j / self.px_density))]
+                ]
 
-        for i in range(0, self.px_arr.shape[0], self.px_density):
-            for j in range(0, self.px_arr.shape[1], self.px_density):
-                self.px_arr[i][j] = (255, 255, 255)
+        px_arr.close()
+        # self.px_arr.transpose()
 
-        # self.screen.blit(self.player.image, self.player.rect.topleft)
-        # for wall in self.obstacles:
-        #     self.screen.blit(wall.image, wall.rect)
+        self.screen.blit(self.player.image, self.player.rect.topleft)
+        for wall in self.obstacles:
+            self.screen.blit(wall.image, wall.rect)
 
         # flip() the display to put your work on screen
         pygame.display.flip()
 
-    def ray_trace(self, player: Maze_Objects.Maze_Player, obstacles) -> list[list[tuple[graphic_assets.COLOR]]]:
-        curr_direction = player.direction.rotate(player.vision_range / 2)
+    def ray_trace(self, player: Maze_Objects.Maze_Player, obstacles: pygame.sprite.Group) \
+            -> list[list[graphic_assets.COLOR]]:
+        curr_direction: Vector2 = player.direction.copy()
+        curr_direction.rotate_ip(-player.vision_range / 2)
+
         delta_angle = player.vision_range / self.resolution[0]
+        pxs_arr: list[list[graphic_assets.COLOR]] = []
         for i in range(self.resolution[0]):
             min_distance = float("inf")
             for obstacle_sprite in obstacles:
-                if (intersection := get_intersection(curr_direction, obstacle_sprite)) is not None:
-                    obstacle_distance = min(min_distance, (intersection - player.rect.center).length())
+                if (intersection_dist := get_intersection_dist(player.rect.center, curr_direction,
+                                                               obstacle_sprite)) is not None:
+                    min_distance = min(min_distance, intersection_dist)
 
+            obstacle_height = int(math.ceil(
+                # self.max_obj_height * math.exp(-min_distance / self.ray_length)
+                self.max_obj_height * (1 - min_distance / self.ray_length)
+            )) if min_distance < self.ray_length else 0
+            # obstacle_height = self.resolution[1] // 3
+            tmp = abs(self.resolution[1] - obstacle_height) / 2
+            tmp = int(math.ceil(tmp))
+            pxs_arr.append(
+                [graphic_assets.COLOR.SKY for _ in range(tmp)] +
+                [graphic_assets.COLOR.WALL for _ in range(obstacle_height)] +
+                [graphic_assets.COLOR.GROUND for _ in range(tmp)]
+            )
             curr_direction.rotate_ip(delta_angle)
 
-        return []
+        return pxs_arr
 
     def update_movement(self, sprite, dt):
         old_x, old_y = sprite.rect.x, sprite.rect.y
