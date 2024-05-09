@@ -46,7 +46,7 @@ class Game:
             # limits FPS to 60
             # dt is delta time in seconds since last frame, used for framerate-
             # independent physics.
-            dt = self.clock.tick(60) / 1000
+            dt = self.clock.tick(20) / 1000
 
         pygame.quit()
 

@@ -13,10 +13,9 @@ class Maze_Player(pygame.sprite.Sprite):
         self.image.fill(color)
         self.rect = self.image.get_rect()
         self.rect.center = [screen.get_width() / 2, screen.get_height() / 2]
-        self.speed = 200
-        self.turning_speed = 0.4
+        self.speed = 110
+        self.turning_speed = 0.2
         self.vision_range = 90
-        self.vision_depth = 1500
 
     def draw(self, screen):
         screen.blit(self.image, self.rect.topleft)

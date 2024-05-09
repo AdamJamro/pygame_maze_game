@@ -32,12 +32,13 @@ def get_intersection_dist(center: pygame.math.Vector2, curr_direction: pygame.ma
     # ray_line = get_line_at_point(Vector2(center), Vector2(curr_direction))
     candidate = float("inf")
 
-    if abs(curr_direction.x) < 0.1:
+    if abs(curr_direction.x) < 0.01:
         x = center.x
         if obstacle.rect.topleft[0] < x < obstacle.rect.topright[0]:
             candidate1 = (center.y - obstacle.rect.topleft[1]) ** 2
             candidate2 = (center.y - obstacle.rect.bottomleft[1]) ** 2
             candidate = min(candidate1, candidate2)
+            # print(candidate1, candidate2)
         return candidate if candidate != float("inf") else None
 
     if abs(curr_direction.length()) < 0.01:
@@ -76,7 +77,7 @@ def get_intersection_dist(center: pygame.math.Vector2, curr_direction: pygame.ma
 class Engine:
 
     # px_density is the sqrt of the amount of actual pxs used to render one virtual px
-    def __init__(self, screen: pygame.Surface, player: Maze_Objects.Maze_Player, obstacles, px_density: int = 10):
+    def __init__(self, screen: pygame.Surface, player: Maze_Objects.Maze_Player, obstacles, px_density: int = 1):
         self.screen = screen
         self.width, self.height = screen.get_width(), screen.get_height()
         self.center_point = (self.width / 2, self.height / 2)
@@ -84,7 +85,7 @@ class Engine:
         self.obstacles = obstacles
         self.px_density = px_density
         self.resolution = (int(screen.get_width() / self.px_density), int(screen.get_height() / self.px_density))
-        self.ray_length = self.resolution[0]  # MAX
+        self.ray_length = 250
         self.max_obj_height = self.resolution[1]
 
     def animate(self, dt):
@@ -93,8 +94,8 @@ class Engine:
         self.update_movement(self.player, dt)
         px_arr = pygame.PixelArray(self.screen)
         pxs_to_render = self.ray_trace(self.player, self.obstacles)
-        for i in range(0, px_arr.shape[0], self.px_density // 2):
-            for j in range(0, px_arr.shape[1], self.px_density // 2):
+        for i in range(0, px_arr.shape[0], self.px_density):
+            for j in range(0, px_arr.shape[1], self.px_density):
                 px_arr[i, j] = graphic_assets.color_of[  # pxs_to_render[i][j]
                     pxs_to_render[int(math.floor(i / self.px_density))][int(math.floor(j / self.px_density))]
                 ]
@@ -126,10 +127,11 @@ class Engine:
             obstacle_height = int(math.ceil(
                 # self.max_obj_height * math.exp(-min_distance / self.ray_length)
                 self.max_obj_height * (1 - min_distance / self.ray_length)
-            )) if min_distance < self.ray_length else 0
+            )) if 0 < min_distance < self.ray_length else 0
             # obstacle_height = self.resolution[1] // 3
             tmp = abs(self.resolution[1] - obstacle_height) / 2
             tmp = int(math.ceil(tmp))
+
             pxs_arr.append(
                 [graphic_assets.COLOR.SKY for _ in range(tmp)] +
                 [graphic_assets.COLOR.WALL for _ in range(obstacle_height)] +
