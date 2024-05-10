@@ -32,14 +32,15 @@ def get_intersection_dist(center: pygame.math.Vector2, curr_direction: pygame.ma
     # ray_line = get_line_at_point(Vector2(center), Vector2(curr_direction))
     candidate = float("inf")
 
-    if abs(curr_direction.x) < 0.01:
-        x = center.x
-        if obstacle.rect.topleft[0] < x < obstacle.rect.topright[0]:
-            candidate1 = (center.y - obstacle.rect.topleft[1]) ** 2
+    if abs(curr_direction.x) < 0.005:
+        if (obstacle.rect.left < center.x < obstacle.rect.right and
+                (dy := center.y - obstacle.rect.topleft[1]) * curr_direction.y < 0):
+            candidate1 = dy ** 2
             candidate2 = (center.y - obstacle.rect.bottomleft[1]) ** 2
             candidate = min(candidate1, candidate2)
-            # print(candidate1, candidate2)
-        return candidate if candidate != float("inf") else None
+
+        # print(candidate1, candidate2)
+        return None if candidate == float("inf") else math.sqrt(candidate)
 
     if abs(curr_direction.length()) < 0.01:
         return None  # maybe raise an error
@@ -77,7 +78,7 @@ def get_intersection_dist(center: pygame.math.Vector2, curr_direction: pygame.ma
 class Engine:
 
     # px_density is the sqrt of the amount of actual pxs used to render one virtual px
-    def __init__(self, screen: pygame.Surface, player: Maze_Objects.Maze_Player, obstacles, px_density: int = 1):
+    def __init__(self, screen: pygame.Surface, player: Maze_Objects.Maze_Player, obstacles, px_density: int = 6):
         self.screen = screen
         self.width, self.height = screen.get_width(), screen.get_height()
         self.center_point = (self.width / 2, self.height / 2)
@@ -85,10 +86,10 @@ class Engine:
         self.obstacles = obstacles
         self.px_density = px_density
         self.resolution = (int(screen.get_width() / self.px_density), int(screen.get_height() / self.px_density))
-        self.ray_length = 250
+        self.ray_length = 350
         self.max_obj_height = self.resolution[1]
 
-    def animate(self, dt):
+    def render_scene(self, dt):
         # fill the screen with a color to wipe away anything from last frame
         self.screen.fill("black")
         self.update_movement(self.player, dt)
@@ -125,7 +126,7 @@ class Engine:
                     min_distance = min(min_distance, intersection_dist)
 
             obstacle_height = int(math.ceil(
-                # self.max_obj_height * math.exp(-min_distance / self.ray_length)
+                # self.max_obj_height * math.exp(-min_distance / self.ray_length / 2)
                 self.max_obj_height * (1 - min_distance / self.ray_length)
             )) if 0 < min_distance < self.ray_length else 0
             # obstacle_height = self.resolution[1] // 3

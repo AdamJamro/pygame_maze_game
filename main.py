@@ -41,7 +41,7 @@ class Game:
                         running = False
                         continue
 
-            engine.animate(dt)
+            engine.render_scene(dt)
 
             # limits FPS to 60
             # dt is delta time in seconds since last frame, used for framerate-
